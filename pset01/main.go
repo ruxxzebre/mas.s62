@@ -109,8 +109,7 @@ func HexToPubkey(s string) (PublicKey, error) {
 
 	// first, make sure hex string is of correct length
 	if len(s) != expectedLength {
-		return p, fmt.Errorf(
-			"Pubkey string %d characters, expect %d", expectedLength)
+		return p, fmt.Errorf("Pubkey string %d characters, expect %d", expectedLength, expectedLength)
 	}
 
 	// decode from hex to a byte slice
@@ -187,8 +186,7 @@ func HexToSignature(s string) (Signature, error) {
 
 	// first, make sure hex string is of correct length
 	if len(s) != expectedLength {
-		return sig, fmt.Errorf(
-			"Pubkey string %d characters, expect %d", expectedLength)
+		return sig, fmt.Errorf("Pubkey string %d characters, expect %d", expectedLength, expectedLength)
 	}
 
 	// decode from hex to a byte slice
