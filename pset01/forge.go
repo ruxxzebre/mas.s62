@@ -43,7 +43,7 @@ of 32 bytes each, for a total of 8192 bytes.  There is no indication of whether
 the provided preimage is from the 0-row or the 1-row; the accompanying message
 hash can be used instead, or both can be tried.  This again interprets the message
 hash in big-endian format, where
-    message[i/8]>>(7-(i%8)))&0x01
+	message[i/8]>>(7-(i%8)))&0x01
 can be used to determine which preimage block to reveal, where message[] is the
 message to be signed, and i is the sequence of bits in the message, and blocks
 in the signature.
@@ -119,7 +119,7 @@ func Forge() (string, Signature, error) {
 	fmt.Printf("ok 3: %v\n", Verify(msgslice[2], pub, sig3))
 	fmt.Printf("ok 4: %v\n", Verify(msgslice[3], pub, sig4))
 
-	msgString := "my forged message"
+	msgString := "my forged message by Pavlo Chaikovskyi paullaboratory@gmail.com"
 	var sig Signature
 
 	// your code here!

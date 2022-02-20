@@ -24,10 +24,15 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"math/rand"
 )
 
-func main() {
+func testNthBit(b byte, n int) bool {
+	mask := [8]int{128, 64, 32, 16, 8, 4, 2, 1}
+	return ((b & byte(mask[n])) != 0)
+}
 
+func main() {
 	// Define your message
 	textString := "1"
 	fmt.Printf("%s\n", textString)
@@ -220,6 +225,13 @@ func GenerateKey() (SecretKey, PublicKey, error) {
 
 	// Your code here
 	// ===
+	for i := 0; i < len(sec.OnePre); i++ {
+		rand.Read(sec.ZeroPre[i][:])
+		rand.Read(sec.OnePre[i][:])
+
+		pub.ZeroHash[i] = sec.ZeroPre[i].Hash()
+		pub.OneHash[i] = sec.OnePre[i].Hash()
+	}
 
 	// ===
 	return sec, pub, nil
@@ -231,6 +243,15 @@ func Sign(msg Message, sec SecretKey) Signature {
 
 	// Your code here
 	// ===
+	for i := 0; i < len(sig.Preimage); i++ {
+		for k := 7; k >= 0; k-- {
+			if testNthBit(msg[i%(len(msg) - 1)], k) {
+				sig.Preimage[i] = sec.ZeroPre[i]
+			} else {
+				sig.Preimage[i] = sec.OnePre[i]
+			}
+		}
+	}
 
 	// ===
 	return sig
@@ -242,6 +263,11 @@ func Verify(msg Message, pub PublicKey, sig Signature) bool {
 
 	// Your code here
 	// ===
+	for i := 0; i < len(sig.Preimage); i++ {
+		if !(sig.Preimage[i].IsPreimage(pub.OneHash[i]) || sig.Preimage[i].IsPreimage(pub.ZeroHash[i])) {
+			return false
+		}			
+	}
 
 	// ===
 
