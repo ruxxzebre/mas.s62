@@ -8,11 +8,18 @@ package main
 // the beginning.  Could take forever if targetBits is too high.
 // Modifies a block in place by using a pointer receiver.
 func (self *Block) Mine(targetBits uint8) {
+
+	for {
+	}
 	// your mining code here
 	// also feel free to get rid of this method entirely if you want to
 	// organize things a different way; this is just a suggestion
 
 	return
+}
+
+func generateNonce() string {
+	return ""
 }
 
 // CheckWork checks if there's enough work
