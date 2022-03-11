@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -12,11 +14,20 @@ import (
 	"sync"
 )
 
+
 var (
 	genesisBlock     = "0000000000000000000000000000000000000000000000000000000000000000 satoshi 11970128322"
 	chainFilename    = "./chain.txt"
 	chainOldFilename = "./chainreload.txt"
 )
+
+type Hash [32]byte
+
+type Block struct {
+	PrevHash Hash
+	Name     string
+	Nonce    string
+}
 
 // BlockChain is not actually a blockchain, it's just the tip.
 // The chain itself only exists in a file.
@@ -26,6 +37,54 @@ type BlockChain struct {
 	bchan chan Block
 }
 
+func (self Hash) ToString() string {
+	return fmt.Sprintf("%x", self)
+}
+
+func (self Block) ToString() string {
+	return fmt.Sprintf("%x %s %s", self.PrevHash, self.Name, self.Nonce)
+}
+
+func (self Block) Hash() Hash {
+	return sha256.Sum256([]byte(self.ToString()))
+}
+
+// BlockFromString takes in a string and converts it to a block, if possible
+func BlockFromString(s string) (Block, error) {
+	var bl Block
+
+	// check string length
+	if len(s) < 66 || len(s) > 100 {
+		return bl, fmt.Errorf("Invalid string length %d, expect 66 to 100", len(s))
+	}
+	// split into 3 substrings via spaces
+	subStrings := strings.Split(s, " ")
+
+	if len(subStrings) != 3 {
+		return bl, fmt.Errorf("got %d elements, expect 3", len(subStrings))
+	}
+
+	hashbytes, err := hex.DecodeString(subStrings[0])
+	if err != nil {
+		return bl, err
+	}
+	if len(hashbytes) != 32 {
+		return bl, fmt.Errorf("got %d byte hash, expect 32", len(hashbytes))
+	}
+
+	copy(bl.PrevHash[:], hashbytes)
+
+	bl.Name = subStrings[1]
+
+	// remove trailing newline if there; the blocks don't include newlines, but
+	// when transmitted over TCP there's a newline to signal end of block
+	bl.Nonce = strings.TrimSpace(subStrings[2])
+
+	// TODO add more checks on name/nonce ...?
+
+	return bl, nil
+}
+
 func Server() error {
 
 	f2, err := os.Create(chainFilename)
@@ -33,6 +92,8 @@ func Server() error {
 		return err
 	}
 	f2.Close()
+
+	fmt.Println("Server up and running on http://127.0.0.1:6262/")
 
 	var bc BlockChain
 
@@ -294,7 +355,7 @@ func HandleBlockSubmission(bc *BlockChain) {
 // Assumes "prev" block is OK, but checks "next"
 func CheckNextBlock(prev, next Block) bool {
 	// first check the work on the new block.  33 bits needed.
-	if !CheckWork(next, 33) {
+	if !ServerCheckWork(next, 33) {
 		log.Printf("not enought work! ")
 		return false
 	}
@@ -310,8 +371,8 @@ func CheckNextBlock(prev, next Block) bool {
 	return true
 }
 
-// CheckWork checks if there's enough work
-func CheckWork(bl Block, targetBits uint8) bool {
+// ServerCheckWork checks if there's enough work
+func ServerCheckWork(bl Block, targetBits uint8) bool {
 	h := bl.Hash()
 
 	for i := uint8(0); i < targetBits; i++ {
@@ -324,4 +385,13 @@ func CheckWork(bl Block, targetBits uint8) bool {
 		}
 	}
 	return true
+}
+
+func main() {
+	fmt.Println("Server running...")
+	err := Server()
+
+	if err != nil {
+		fmt.Println("Error happened: ", err)
+	}
 }
