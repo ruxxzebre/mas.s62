@@ -22,6 +22,8 @@ func makeMiner(targetBits uint8, nonceSize uint32) Miner {
 	return Miner{
 		targetBits,
 		nonceSize,
+		// channelIndex*incrementval,
+		// (channelIndex+1)*incrementval,
 	}
 }
 
@@ -42,6 +44,7 @@ func (miner *Miner) Run(channel chan Block, chanAmount int) {
 		fmt.Println("Block error.")
 	}
 
+	// self.channelAmount = chanAmount
 	uchanAmount := uint32(chanAmount)
 
 	incval := uint32(miner.nonceSize / uchanAmount - 1)
@@ -54,6 +57,8 @@ func (miner *Miner) Run(channel chan Block, chanAmount int) {
 func (miner *Miner) mine(channel chan Block, prevBlock Block, jobIdx uint32, incval uint32, chanam int) {
 
 	start := time.Now()
+	// var nonce Nonce
+	// nonce.setRef("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
 
 	var newBlock Block
 	newBlock.PrevHash = prevBlock.Hash()
@@ -66,11 +71,16 @@ func (miner *Miner) mine(channel chan Block, prevBlock Block, jobIdx uint32, inc
 		newBlock.Nonce = fmt.Sprint(i)
 		if OldCheckWork(newBlock, miner.targetBits) {
 			channel <- newBlock
+			// close(channel)
+
 			log.Println("DONE")
 			miner.logWork(start, int(jobIdx), chanam)
 		}
 		i++
 	}
+	// your mining code here
+	// also feel free to get rid of this method entirely if you want to
+	// organize things a different way; this is just a suggestion
 }
 
 func check (err error) {
@@ -94,15 +104,54 @@ func (miner *Miner) logWork(start time.Time, cidx int, chanam int) {
 
 	template := "%d,%d,%d,%v\n"
 	f.WriteString(fmt.Sprintf(template, miner.targetBits, chanam, cidx, 
+		// int(elapsed.Hours()), 
+		// int(elapsed.Minutes()), 
+		// int(elapsed.Seconds()), 
+		// elapsed.Milliseconds()),
 		elapsed.String()),
 	)
 	f.Close()
 }
 
+// func NewCheckWork(bl Block, targetBits uint8) bool {
+// 	h := bl.Hash()
+
+// 	i := uint8(0)
+// 	for {
+
+// 	}
+// }
+
 func OldCheckWork(bl Block, targetBits uint8) bool {
 	h := bl.Hash()
 
 	for i := uint8(0); i < targetBits; i++ {
+		// for every bit from the MSB down, check if it's a 1.
+		// If it is, stop and fail.
+		// Could definitely speed this up by checking bytes at a time.
+		// Left as excercise for the reader...?
+		if (h[i/8]>>(7-(i%8)))&0x01 == 1 {
+			return false
+		}
+	}
+	return true
+}
+
+// CheckWork checks if there's enough work
+func CheckWork(bl Block, targetBits uint8) bool {
+	h := bl.Hash()
+	tbrem := targetBits%8
+	tbmod := int(targetBits/8)
+
+	// fmt.Printf("tb: %d, rem: %d, mod: %d\n", targetBits, tbrem, tbmod)
+
+	for i := 0; i < tbmod; i++ {
+		if h[i] > 0 {
+			return false
+		}
+	}
+
+	for i := uint8(targetBits - tbrem); i < tbrem; i++ {
 		// for every bit from the MSB down, check if it's a 1.
 		// If it is, stop and fail.
 		// Could definitely speed this up by checking bytes at a time.
