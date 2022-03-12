@@ -81,20 +81,27 @@ func main() {
 	// To reduce stales, poll the server every so often and update the
 	// tip you're mining off of if it has changed.
 
-	c := make(chan Block)
+	for {
+		fmt.Println("################################\n\nEXEC\n")
+		c := make(chan Block)
 
-	// top number possible as uint32
-	uinttop := uint32(4294967295)
-	// 4 294 967 295
-	channels := 100000
-	// channels := 1
+		// top number possible as uint32
+		// 4 294 967 295
+		uinttop := uint32(4294967295)
+		channels := 64
+		difficulty := uint8(33)
+		// channels := 1
 
-	miner := makeMiner(33, uinttop)
-	miner.Run(c, channels)
+		miner := makeMiner(difficulty, uinttop)
+		miner.Run(c, channels)
 
-	newb := <- c
+		newb := <- c
+		close(c)
 
-	fmt.Println(newb.Hash())
+		fmt.Println(newb.Hash())
 
-	SendBlockToServer(newb)
+		SendBlockToServer(newb)
+
+		fmt.Println("")
+	}
 }

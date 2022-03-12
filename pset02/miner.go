@@ -27,23 +27,34 @@ func makeMiner(targetBits uint8, nonceSize uint32) Miner {
 	}
 }
 
-func (self *Miner) Run(channel chan Block, chanAmount int) {
+func (miner *Miner) poolTip() (Block, error) {
+	prevBlock, err := GetTipFromServer()
+
+	if err != nil {
+		fmt.Println("Block error.")
+		return prevBlock, err
+	}
+	return prevBlock, nil
+}
+
+func (miner *Miner) Run(channel chan Block, chanAmount int) {
 	prevBlock, err := GetTipFromServer()
 
 	if err != nil {
 		fmt.Println("Block error.")
 	}
 
+	// self.channelAmount = chanAmount
 	uchanAmount := uint32(chanAmount)
 
-	incval := uint32(self.nonceSize / uchanAmount - 1)
+	incval := uint32(miner.nonceSize / uchanAmount - 1)
 
 	for i := uint32(0); i < uchanAmount; i++ {
-		go self.mine(channel, prevBlock, i, incval)
+		go miner.mine(channel, prevBlock, i, incval, chanAmount)
 	}
 }
 
-func (self *Miner) mine(channel chan Block, prevBlock Block, jobIdx uint32, incval uint32) {
+func (miner *Miner) mine(channel chan Block, prevBlock Block, jobIdx uint32, incval uint32, chanam int) {
 
 	start := time.Now()
 	// var nonce Nonce
@@ -58,12 +69,12 @@ func (self *Miner) mine(channel chan Block, prevBlock Block, jobIdx uint32, incv
 	
 	for i < top {
 		newBlock.Nonce = fmt.Sprint(i)
-		if OldCheckWork(newBlock, self.targetBits) {
+		if OldCheckWork(newBlock, miner.targetBits) {
 			channel <- newBlock
 			// close(channel)
 
 			log.Println("DONE")
-			logWork(start, int(self.targetBits), int(jobIdx))
+			miner.logWork(start, int(jobIdx), chanam)
 		}
 		i++
 	}
@@ -72,17 +83,34 @@ func (self *Miner) mine(channel chan Block, prevBlock Block, jobIdx uint32, incv
 	// organize things a different way; this is just a suggestion
 }
 
-func logWork(start time.Time, targetBits int, cidx int) {
+func check (err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (miner *Miner) logWork(start time.Time, cidx int, chanam int) {
 	elapsed := time.Since(start)
 
-	f, err := os.OpenFile("./measure.txt", os.O_APPEND|os.O_WRONLY, 0666)
-		if err != nil {
-			panic(err)
-		}
+	f, err := os.OpenFile("./measure.csv", os.O_APPEND|os.O_WRONLY, 0666)
+	check(err)
 
-		template := "DIFFICULTY: %d; CHANNEL INDEX: %d; ELAPSED TIME: {ms: %d, s: %g}\n"
-		f.WriteString(fmt.Sprintf(template, targetBits, cidx, elapsed.Milliseconds(), elapsed.Seconds()))
-		f.Close()
+	stat, err := f.Stat()
+	check(err)
+
+	if stat.Size() == 0 {
+		f.WriteString("DIFFICULTY,CHANNELS,CHANNEL_INDEX,ELAPSED_TIME\n")
+	}
+
+	template := "%d,%d,%d,%v\n"
+	f.WriteString(fmt.Sprintf(template, miner.targetBits, chanam, cidx, 
+		// int(elapsed.Hours()), 
+		// int(elapsed.Minutes()), 
+		// int(elapsed.Seconds()), 
+		// elapsed.Milliseconds()),
+		elapsed.String()),
+	)
+	f.Close()
 }
 
 // func NewCheckWork(bl Block, targetBits uint8) bool {
