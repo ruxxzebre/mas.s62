@@ -91,7 +91,7 @@ func main() {
 		difficulty := uint8(25)
 		// channels := 1
 
-		miner, err := makeMiner(difficulty, uinttop, "flexa")
+		miner, err := MakeMiner(difficulty, uinttop, "ruxxzebre")
 		
 		if err != nil {
 			panic(err)

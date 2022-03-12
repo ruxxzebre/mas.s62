@@ -24,15 +24,15 @@ type Miner struct {
 	ResultChan chan Block
 }
 
-func makeMiner(targetBits uint8, nonceSize uint32, data string) (Miner, error) {
+func MakeMiner(targetBits uint8, nonceSize uint32, data string) (*Miner, error) {
 	block, err := GetTipFromServer()
 
 	if err != nil {
 		fmt.Println("Block error.")
-		return *new(Miner), err
+		return new(Miner), err
 	}	
 
-	return Miner{
+	return &Miner{
 		targetBits,
 		nonceSize,
 		block,
