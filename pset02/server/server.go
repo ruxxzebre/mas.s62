@@ -14,6 +14,7 @@ import (
 	"sync"
 )
 
+const DIFFICULTY = 33
 
 var (
 	genesisBlock     = "0000000000000000000000000000000000000000000000000000000000000000 satoshi 11970128322"
@@ -355,7 +356,7 @@ func HandleBlockSubmission(bc *BlockChain) {
 // Assumes "prev" block is OK, but checks "next"
 func CheckNextBlock(prev, next Block) bool {
 	// first check the work on the new block.  33 bits needed.
-	if !ServerCheckWork(next, 33) {
+	if !ServerCheckWork(next, DIFFICULTY) {
 		log.Printf("not enought work! ")
 		return false
 	}
