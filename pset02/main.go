@@ -83,25 +83,27 @@ func main() {
 
 	for {
 		fmt.Println("################################\n\nEXEC\n")
-		c := make(chan Block)
 
 		// top number possible as uint32
 		// 4 294 967 295
 		uinttop := uint32(4294967295)
-		channels := 64
-		difficulty := uint8(33)
+		channelAmount := 64
+		difficulty := uint8(25)
 		// channels := 1
 
-		miner := makeMiner(difficulty, uinttop)
-		miner.Run(c, channels)
+		miner, err := makeMiner(difficulty, uinttop, "flexa")
+		
+		if err != nil {
+			panic(err)
+		}
 
-		newb := <- c
-		close(c)
+		miner.Run(channelAmount)
 
-		fmt.Println(newb.Hash())
+		<- miner.MiningDone
+		newb := <- miner.ResultChan
+		close(miner.ResultChan)
 
+		fmt.Printf("Mined hash: %v", newb.Hash().ToString())
 		SendBlockToServer(newb)
-
-		fmt.Println("")
 	}
 }
