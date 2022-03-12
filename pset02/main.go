@@ -86,7 +86,8 @@ func main() {
 	// top number possible as uint32
 	uinttop := uint32(4294967295)
 	// 4 294 967 295
-	channels := 20
+	channels := 100000
+	// channels := 1
 
 	miner := makeMiner(33, uinttop)
 	miner.Run(c, channels)
