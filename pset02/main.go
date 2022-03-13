@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -84,12 +85,9 @@ func main() {
 	for {
 		fmt.Println("################################\n\nEXEC\n")
 
-		// top number possible as uint32
-		// 4 294 967 295
-		uinttop := uint32(4294967295)
+		uinttop := uint32(math.MaxUint32)
 		channelAmount := 64
-		difficulty := uint8(25)
-		// channels := 1
+		difficulty := 25
 
 		miner, err := MakeMiner(difficulty, uinttop, "ruxxzebre")
 		
@@ -103,7 +101,7 @@ func main() {
 		newb := <- miner.ResultChan
 		close(miner.ResultChan)
 
-		fmt.Printf("Mined hash: %v", newb.Hash().ToString())
+		fmt.Printf("Mined block: %v", newb.Hash().ToString())
 		SendBlockToServer(newb)
 	}
 }

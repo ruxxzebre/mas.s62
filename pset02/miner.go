@@ -24,7 +24,7 @@ type Miner struct {
 	ResultChan chan Block
 }
 
-func MakeMiner(targetBits uint8, nonceSize uint32, data string) (*Miner, error) {
+func MakeMiner(targetBits int, nonceSize uint32, data string) (*Miner, error) {
 	block, err := GetTipFromServer()
 
 	if err != nil {
@@ -33,7 +33,7 @@ func MakeMiner(targetBits uint8, nonceSize uint32, data string) (*Miner, error) 
 	}	
 
 	return &Miner{
-		targetBits,
+		uint8(targetBits),
 		nonceSize,
 		block,
 		data,
