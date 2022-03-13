@@ -1,4 +1,4 @@
-package server
+package main
 
 import (
 	"bufio"
@@ -11,32 +11,7 @@ import (
 	"os"
 	"sort"
 	"strings"
-	"sync"
 )
-
-const DIFFICULTY = 16
-
-var (
-	genesisBlock     = "0000000000000000000000000000000000000000000000000000000000000000 satoshi 11970128322"
-	chainFilename    = "./chain.txt"
-	chainOldFilename = "./chainreload.txt"
-)
-
-type Hash [32]byte
-
-type Block struct {
-	PrevHash Hash
-	Name     string
-	Nonce    string
-}
-
-// BlockChain is not actually a blockchain, it's just the tip.
-// The chain itself only exists in a file.
-type BlockChain struct {
-	mtx   sync.Mutex
-	tip   Block
-	bchan chan Block
-}
 
 func (self Hash) ToString() string {
 	return fmt.Sprintf("%x", self)
@@ -356,7 +331,7 @@ func HandleBlockSubmission(bc *BlockChain) {
 // Assumes "prev" block is OK, but checks "next"
 func CheckNextBlock(prev, next Block) bool {
 	// first check the work on the new block.  33 bits needed.
-	if !ServerCheckWork(next, DIFFICULTY) {
+	if !ServerCheckWork(next, difficulty) {
 		log.Printf("not enought work! ")
 		return false
 	}
