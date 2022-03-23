@@ -16,7 +16,6 @@ import (
 type Miner struct {
 	targetBits uint8
 	nonceSize uint32
-	lastBlock Block
 	data string
 	MiningDone chan bool
 	chanAmount int
@@ -24,18 +23,14 @@ type Miner struct {
 	ResultChan chan Block
 }
 
+type IMiner interface {
+	Run(chanAmount int, block Block)
+}
+
 func MakeMiner(targetBits int, nonceSize uint32, data string) (*Miner, error) {
-	block, err := GetTipFromServer()
-
-	if err != nil {
-		fmt.Println("Block error.")
-		return new(Miner), err
-	}	
-
 	return &Miner{
 		uint8(targetBits),
 		nonceSize,
-		block,
 		data,
 		make(chan bool),
 		0,
@@ -50,48 +45,48 @@ func (m *Miner) initStaleMap() {
 	}
 }
 
-func (m *Miner) poolNewBlocks() error {
-	for {
-		time.Sleep(time.Second)
-		block, err := GetTipFromServer()
+// func (m *Miner) poolNewBlocks() error {
+// 	for {
+// 		time.Sleep(time.Second)
+// 		block, err := GetTipFromServer()
 
-		if err != nil {
-			fmt.Println("Block error.")
-			return err
-		}
+// 		if err != nil {
+// 			fmt.Println("Block error.")
+// 			return err
+// 		}
 
-		m.lastBlock = block
+// 		m.lastBlock = block
 		
-		if block.Hash().ToString() != m.lastBlock.Hash().ToString() {
-			fmt.Println("Block mismatch. Updating...")
-			for i := 0; i < m.chanAmount; i++ {
-				m.staleSync[i] = true
-			}
-		}
-	}
-}
+// 		if block.Hash().ToString() != m.lastBlock.Hash().ToString() {
+// 			fmt.Println("Block mismatch. Updating...")
+// 			for i := 0; i < m.chanAmount; i++ {
+// 				m.staleSync[i] = true
+// 			}
+// 		}
+// 	}
+// }
 
-func (m *Miner) Run(chanAmount int) {
+func (m *Miner) Run(chanAmount int, block Block) {
 	uchanAmount := uint32(chanAmount)
 	m.chanAmount = chanAmount
-	m.initStaleMap()
-	go m.poolNewBlocks()
+	// m.initStaleMap()
+	// go m.poolNewBlocks()
 
 	incval := uint32(m.nonceSize / uchanAmount - 1)
 
 	m.logStart()
 	for i := uint32(0); i < uchanAmount; i++ {
-		go m.mine(i, incval, chanAmount)
+		go m.mine(i, incval, chanAmount, &block)
 	}
 }
 
-func (m *Miner) initNewBlock() Block {
-	return Block{
-		m.lastBlock.Hash(),
-		m.data,
-		"",
-	}
-}
+// func (m *Miner) initNewBlock() Block {
+// 	return Block{
+// 		m.lastBlock.Hash(),
+// 		m.data,
+// 		"",
+// 	}
+// }
 
 func (m *Miner) initLoopingVars(jobIdx uint32, incval uint32) (uint32, uint32) {
 	i := jobIdx * incval
@@ -99,27 +94,26 @@ func (m *Miner) initLoopingVars(jobIdx uint32, incval uint32) (uint32, uint32) {
 	return i, top
 }
 
-func (m *Miner) mine(jobIdx uint32, incval uint32, chanam int) {
+func (m *Miner) mine(jobIdx uint32, incval uint32, chanam int, lastBlock *Block) {
 	start := time.Now()
 
-	newBlock := m.initNewBlock()
+	// newBlock := m.initNewBlock()
 
 	i, top := m.initLoopingVars(jobIdx, incval)
 	
 	for i < top {
-		if m.staleSync[chanam] {
-			fmt.Println("Revoking stale blocks")
-			newBlock = m.initNewBlock()
-			i, top = m.initLoopingVars(jobIdx, incval)
-			m.staleSync[chanam] = false
-		}
-
-		newBlock.Nonce = fmt.Sprint(i)
-		if m.checkWork(newBlock) {
+		// if m.staleSync[chanam] {
+		// 	fmt.Println("Revoking stale blocks")
+		// 	newBlock = m.initNewBlock()
+		// 	i, top = m.initLoopingVars(jobIdx, incval)
+		// 	m.staleSync[chanam] = false
+		// }
+		lastBlock.Nonce = fmt.Sprint(i)
+		if m.checkWork(lastBlock) {
 			m.MiningDone <- true	
 			log.Println("DONE")
 			m.logWork(start, int(jobIdx), chanam)
-			m.ResultChan <- newBlock
+			m.ResultChan <- *lastBlock
 			return
 		}
 		i++
@@ -161,11 +155,11 @@ func (m *Miner) logWork(start time.Time, cidx int, chanam int) {
 	m.logDone(elapsed.String())
 }
 
-func (m *Miner) checkWork(bl Block) bool {
+func (m *Miner) checkWork(bl *Block) bool {
 	return OldCheckWork(bl, m.targetBits)
 }
 
-func OldCheckWork(bl Block, targetBits uint8) bool {
+func OldCheckWork(bl *Block, targetBits uint8) bool {
 	h := bl.Hash()
 
 	for i := uint8(0); i < targetBits; i++ {

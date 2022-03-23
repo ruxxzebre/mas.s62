@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"time"
 )
 
 // A hash is a sha256 hash, as in pset01
@@ -71,6 +72,23 @@ func BlockFromString(s string) (Block, error) {
 	return bl, nil
 }
 
+func poolNewBlocks(lastBlock *Block, blockStream chan Block) error {
+	for {
+		time.Sleep(time.Second)
+		block, err := GetTipFromServer()
+
+		if err != nil {
+			fmt.Println("Block error.")
+			return err
+		}
+		
+		if block.Hash().ToString() != lastBlock.Hash().ToString() {
+			fmt.Println("Block mismatch. Updating...")
+			blockStream <- block
+		}
+	}
+}
+
 func main() {
 	fmt.Printf("NameChain Miner v0.1\n")
 
@@ -82,20 +100,29 @@ func main() {
 	// To reduce stales, poll the server every so often and update the
 	// tip you're mining off of if it has changed.
 
-	for {
+	iblock, err := GetTipFromServer()
+	if err != nil {
+		panic(err)
+	}
+
+	blockStream := make(chan Block)
+	go poolNewBlocks(&iblock, blockStream)
+	blockStream <- iblock
+
+	for block := range blockStream  {
 		fmt.Println("################################\n\nEXEC\n")
 
 		uinttop := uint32(math.MaxUint32)
 		channelAmount := 64
 		difficulty := 25
 
+		go poolNewBlocks(&block, blockStream)
 		miner, err := MakeMiner(difficulty, uinttop, "ruxxzebre")
-		
 		if err != nil {
 			panic(err)
 		}
 
-		miner.Run(channelAmount)
+		miner.Run(channelAmount, block)
 
 		<- miner.MiningDone
 		newb := <- miner.ResultChan
